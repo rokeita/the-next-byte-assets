@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>StatusPadi - Status promo maker</title>
+<meta name="theme-color" content="#101018">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/icon-192.png">
+<style>
+  :root { --bg:#101018; --card:#1b1b26; --line:#2b2b3a; --text:#f4f4f8; --mut:#9a9ab0; --acc:#7c5cff; --wa:#25d366; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; min-height:100vh; }
+  header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); z-index:5; }
+  .brand { font-weight:800; font-size:18px; letter-spacing:.2px; }
+  .brand span { color:var(--acc); }
+  .chip { font-size:11px; color:var(--mut); border:1px solid var(--line); border-radius:999px; padding:4px 9px; white-space:nowrap; }
+  main { max-width:520px; margin:0 auto; padding:16px 16px 40px; }
+  .step-tag { color:var(--mut); font-size:12px; margin:18px 0 8px; text-transform:uppercase; letter-spacing:1px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .tpl { border:1px solid var(--line); border-radius:14px; background:var(--card); padding:8px; cursor:pointer; text-align:center; }
+  .tpl canvas { width:100%; border-radius:8px; display:block; }
+  .tpl.sel { outline:2px solid var(--acc); outline-offset:2px; }
+  .tpl .name { font-size:11px; color:var(--mut); margin-top:6px; }
+  label { display:block; font-size:13px; color:var(--mut); margin:12px 0 5px; }
+  input, textarea { width:100%; background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:11px 12px; font-size:15px; }
+  textarea { min-height:64px; resize:vertical; }
+  .row { display:flex; gap:10px; }
+  .row > * { flex:1; }
+  .btn { display:block; width:100%; border:0; border-radius:12px; padding:14px; font-size:16px; font-weight:700; cursor:pointer; margin-top:14px; }
+  .btn.primary { background:var(--acc); color:#fff; }
+  .btn.wa { background:var(--wa); color:#06281a; }
+  .btn.ghost { background:transparent; border:1px solid var(--line); color:var(--mut); }
+  .stage { position:relative; }
+  #preview { width:100%; border-radius:16px; display:block; box-shadow:0 10px 40px rgba(0,0,0,.5); }
+  .hint { color:var(--mut); font-size:12px; text-align:center; margin-top:10px; line-height:1.5; }
+  .screens > section { display:none; }
+  .screens > section.on { display:block; }
+  .back { background:none; border:0; color:var(--acc); font-size:14px; padding:8px 0; cursor:pointer; }
+  .file-note { font-size:12px; color:var(--mut); margin-top:4px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Status<span>Padi</span></div>
+  <div class="chip">New templates every Friday</div>
+</header>
+<main>
+  <div class="screens">
+    <section id="s1" class="on">
+      <div class="step-tag">1 - pick a template</div>
+      <div class="grid" id="tplGrid"></div>
+      <button class="btn primary" id="toEditor">Next: add your details</button>
+      <p class="hint">Pick first, details second, share in under a minute. Your draft stays on this phone only.</p>
+    </section>
+    <section id="s2">
+      <button class="back" id="back1">&larr; change template</button>
+      <div class="step-tag">2 - your details</div>
+      <label for="biz">Business name</label>
+      <input id="biz" placeholder="Mama Adjoa's Kitchen">
+      <label for="headline">Big headline</label>
+      <input id="headline" placeholder="WEEKEND SPECIAL">
+      <label for="offer">Price or offer line</label>
+      <input id="offer" placeholder="Jollof + chicken - GHS 25">
+      <label for="copy">One short line more (optional)</label>
+      <textarea id="copy" placeholder="Hot and fresh from 11am, Order before it finishes!"></textarea>
+      <label for="cta">Call to action</label>
+      <input id="cta" placeholder="WhatsApp us" list="ctaList">
+      <datalist id="ctaList"><option>WhatsApp us</option><option>Call now</option><option>Order now</option><option>Visit us</option><option>Book your slot</option></datalist>
+      <label for="phone">Phone or WhatsApp number</label>
+      <input id="phone" inputmode="tel" placeholder="0555 000 000">
+      <label for="img">Product photo (optional)</label>
+      <input type="file" id="img" accept="image/*">
+      <p class="file-note">Your photo is used in the preview only. Nothing is uploaded or stored by us.</p>
+      <button class="btn primary" id="toPreview">Preview my promo</button>
+      <button class="btn ghost" id="clearDraft">Clear draft</button>
+    </section>
+    <section id="s3">
+      <button class="back" id="back2">&larr; edit details</button>
+      <div class="step-tag">3 - preview &amp; share</div>
+      <div class="stage"><canvas id="preview" width="1080" height="1920"></canvas></div>
+      <button class="btn wa" id="share">Share to WhatsApp</button>
+      <button class="btn primary" id="download">Download image</button>
+      <button class="btn ghost" id="again">Start another promo</button>
+      <p class="hint">Share posts a ready 1080 x 1920 image, exactly WhatsApp Status size.</p>
+    </section>
+  </div>
+</main>
+<script>
+(function () {
+  var TEMPLATES = [
+    { id:'opening',  cat:'Grand Opening', bg:['#c81e3c','#7a0f2b'], acc:'#ffd23f', ink:'#ffffff', deco:'confetti', head:'GRAND OPENING!' },
+    { id:'pricedrop',cat:'Price Drop',    bg:['#1652f0','#0a2f8f'], acc:'#ffd23f', ink:'#ffffff', deco:'burst',    head:'PRICE DROP' },
+    { id:'newstock', cat:'New In Stock',  bg:['#0f7d4d','#064e2e'], acc:'#d9f99d', ink:'#ffffff', deco:'leaf',     head:'NEW IN STOCK' },
+    { id:'weekend',  cat:'Weekend Special',bg:['#5b21b6','#2e1065'],acc:'#fb923c', ink:'#ffffff', deco:'bars',     head:'WEEKEND SPECIAL' },
+    { id:'service',  cat:'Service Promo', bg:['#14213d','#0b1526'], acc:'#fca311', ink:'#ffffff', deco:'ring',     head:'BOOK YOUR SLOT' },
+    { id:'order',    cat:'Order Now',     bg:['#052e2b','#021413'], acc:'#25d366', ink:'#ffffff', deco:'wave',     head:'ORDER NOW' }
+  ];
+  var FIELDS = ['biz','headline','offer','copy','cta','phone'];
+  var state = { tpl: TEMPLATES[0], img: null, saved: null };
+  var $ = function (id) { return document.getElementById(id); };
+  var show = function (n) {
+    ['s1','s2','s3'].forEach(function (s) { $(s).classList.toggle('on', s === n); });
+    window.scrollTo(0, 0);
+  };
+  function saveDraft() {
+    var d = { tpl: state.tpl.id };
+    FIELDS.forEach(function (f) { d[f] = $(f).value; });
+    try { localStorage.setItem('statuspadi_draft', JSON.stringify(d)); } catch (e) {}
+  }
+  function loadDraft() {
+    try {
+      var d = JSON.parse(localStorage.getItem('statuspadi_draft') || 'null');
+      if (d) {
+        FIELDS.forEach(function (f) { if (d[f]) $(f).value = d[f]; });
+        if (d.tpl) { var t = TEMPLATES.find(function (x) { return x.id === d.tpl; }); if (t) state.tpl = t; }
+        state.saved = true;
+      }
+    } catch (e) {}
+  }
+  function drawThumb(t, canvas) {
+    var c = canvas.getContext('2d'), w = canvas.width, h = canvas.height;
+    paintScene(c, w, h, t, {
+      biz: 'YOUR BUSINESS', headline: t.head, offer: 'Your offer here',
+      copy: 'Tap to fill in your details', cta: 'WhatsApp us', phone: '', img: null
+    }, 3.6);
+  }
+  function paintScene(c, w, h, t, d, k) {
+    var g = c.createLinearGradient(0, 0, w, h);
+    g.addColorStop(0, t.bg[0]); g.addColorStop(1, t.bg[1]);
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+    c.save(); c.globalAlpha = .16; c.fillStyle = t.acc;
+    if (t.deco === 'confetti') { for (var i = 0; i < 26; i++) { var r = 10 + (i % 5) * 8; c.beginPath(); c.arc((i * 137) % w, (i * 291) % h, r * k, 0, 7); c.fill(); } }
+    if (t.deco === 'burst') { for (var j = 0; j < 14; j++) { c.save(); c.translate(w / 2, h * .42); c.rotate(j * Math.PI / 7); c.fillRect(-w, -3 * k, 2 * w, 6 * k); c.restore(); } }
+    if (t.deco === 'leaf') { for (var m = 0; m < 8; m++) { c.beginPath(); c.ellipse((m * 211) % w, h - (m * 173) % h, 60 * k, 22 * k, m, 0, 7); c.fill(); } }
+    if (t.deco === 'bars') { for (var n = 0; n < 6; n++) { c.save(); c.translate(0, h * .1 + n * h * .16); c.rotate(-.12); c.fillRect(-w * .2, 0, w * 1.4, 14 * k); c.restore(); } }
+    if (t.deco === 'ring') { c.lineWidth = 26 * k; c.beginPath(); c.arc(w * .82, h * .16, 130 * k, 0, 7); c.stroke(); c.beginPath(); c.arc(w * .12, h * .88, 90 * k, 0, 7); c.stroke(); }
+    if (t.deco === 'wave') { for (var p = 0; p < 5; p++) { c.beginPath(); c.lineWidth = 10 * k; c.strokeStyle = t.acc; c.moveTo(0, h * .78 + p * 34 * k); c.bezierCurveTo(w * .3, h * .74 + p * 34 * k, w * .7, h * .84 + p * 34 * k, w, h * .78 + p * 34 * k); c.stroke(); } }
+    c.restore();
+    var x = 90, maxW = w - 180, y = h * .16;
+    c.textAlign = 'left';
+    c.fillStyle = t.acc; roundRect(c, x, y - 54 * k, c.measureText(d.cat || t.cat || '').width + 260, 84 * k, 42 * k); 
+    c.font = '700 ' + 34 * k + 'px system-ui'; c.fillStyle = t.bg[1];
+    c.fillText(d.cat || t.cat, x + 36, y + 2 * k);
+    y = h * .38;
+    var photo = !!d.img;
+    if (d.img) {
+      var imgH = h * (photo ? .24 : .3);
+      var iw = d.img.width, ih = d.img.height, s = Math.max((w - 180) / iw, imgH / ih);
+      var sw = (w - 180) / s, sh = imgH / s;
+      roundRectPath(c, x, y, w - 180, imgH, 40 * k); c.save(); c.clip();
+      c.drawImage(d.img, (iw - sw) / 2, (ih - sh) / 2, sw, sh, x, y, w - 180, imgH);
+      c.restore(); y += imgH + 100 * k;
+    }
+    var headSize = photo ? 88 : 118, headLead = photo ? 100 : 132;
+    c.fillStyle = t.ink; c.font = '900 ' + headSize * k + 'px system-ui';
+    var lines = wrap(c, d.headline.toUpperCase(), maxW);
+    lines.forEach(function (ln) { c.fillText(ln, x, y); y += headLead * k; });
+    y += 30 * k;
+    if (d.offer) { var offSize = photo ? 56 : 62, offLead = photo ? 68 : 76; c.fillStyle = t.acc; c.font = '800 ' + offSize * k + 'px system-ui'; wrap(c, d.offer, maxW).forEach(function (ln) { c.fillText(ln, x, y); y += offLead * k; }); y += (photo ? 16 : 24) * k; }
+    if (d.copy) { var cpSize = photo ? 40 : 44, cpLead = photo ? 52 : 58; c.fillStyle = 'rgba(255,255,255,.85)'; c.font = '500 ' + cpSize * k + 'px system-ui'; wrap(c, d.copy, maxW).slice(0, photo ? 2 : 3).forEach(function (ln) { c.fillText(ln, x, y); y += cpLead * k; }); }
+    var bizY = Math.max(h * .74, y + 64 * k);
+    var ctaTop = Math.max(h * .8, bizY + 100 * k);
+    ctaTop = Math.min(ctaTop, h - 260 * k);
+    if (bizY > ctaTop - 90 * k) bizY = ctaTop - 90 * k;
+    if (d.biz) { c.fillStyle = 'rgba(255,255,255,.92)'; c.font = '800 ' + 46 * k + 'px system-ui'; c.fillText(d.biz, x, bizY); }
+    var cta = d.cta || 'WhatsApp us';
+    if (d.phone) cta = cta + '  ' + d.phone;
+    var ctaSize = 50;
+    c.font = '800 ' + ctaSize * k + 'px system-ui';
+    while (c.measureText(cta).width + 120 * k > maxW && ctaSize > 30) { ctaSize -= 3; c.font = '800 ' + ctaSize * k + 'px system-ui'; }
+    var cw = Math.min(c.measureText(cta).width + 120 * k, maxW);
+    c.fillStyle = t.acc; roundRect(c, x, ctaTop, cw, 110 * k, 55 * k);
+    c.fillStyle = t.bg[1]; c.fillText(cta, x + 60 * k, ctaTop + 74 * k);
+    c.textAlign = 'center'; c.fillStyle = 'rgba(255,255,255,.66)'; c.font = '600 ' + 32 * k + 'px system-ui';
+    c.fillText('made with StatusPadi', w / 2, h - 70 * k);
+  }
+  function wrap(c, text, maxW) {
+    var lines = [], ln = '';
+    String(text || '').split(/\s+/).forEach(function (wd) {
+      if (!wd) return;
+      if (c.measureText(wd).width > maxW) {
+        if (ln) { lines.push(ln); ln = ''; }
+        var chunk = '';
+        for (var i = 0; i < wd.length; i++) {
+          var t2 = chunk + wd[i];
+          if (c.measureText(t2).width > maxW && chunk) { lines.push(chunk); chunk = wd[i]; } else { chunk = t2; }
+        }
+        ln = chunk;
+      } else {
+        var t = ln ? ln + ' ' + wd : wd;
+        if (c.measureText(t).width > maxW && ln) { lines.push(ln); ln = wd; } else { ln = t; }
+      }
+    });
+    if (ln) lines.push(ln);
+    return lines;
+  }
+  function roundRectPath(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+  }
+  function roundRect(c, x, y, w, h, r) { roundRectPath(c, x, y, w, h, r); c.fill(); }
+  function buildGrid() {
+    var grid = $('tplGrid');
+    TEMPLATES.forEach(function (t, i) {
+      var card = document.createElement('div');
+      card.className = 'tpl' + (t === state.tpl ? ' sel' : '');
+      var cv = document.createElement('canvas'); cv.width = 300; cv.height = 533;
+      card.appendChild(cv); drawThumb(t, cv);
+      var nm = document.createElement('div'); nm.className = 'name'; nm.textContent = t.cat;
+      card.appendChild(nm);
+      card.setAttribute('role', 'button');
+      card.tabIndex = 0;
+      var pick = function () {
+        state.tpl = t;
+        Array.prototype.forEach.call(grid.children, function (el) { el.classList.remove('sel'); });
+        card.classList.add('sel'); saveDraft();
+      };
+      card.onclick = pick;
+      card.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } };
+      grid.appendChild(card);
+    });
+  }
+  function render() {
+    var cv = $('preview'), c = cv.getContext('2d');
+    var d = { };
+    FIELDS.forEach(function (f) { d[f] = $(f).value.trim(); });
+    d.img = state.img;
+    paintScene(c, cv.width, cv.height, state.tpl, d, 1);
+  }
+  $('toEditor').onclick = function () { show('s2'); };
+  $('back1').onclick = function () { show('s1'); };
+  $('toPreview').onclick = function () { saveDraft(); render(); show('s3'); };
+  $('back2').onclick = function () { show('s2'); };
+  $('again').onclick = function () { show('s1'); };
+  $('clearDraft').onclick = function () {
+    FIELDS.forEach(function (f) { $(f).value = ''; });
+    $('img').value = '';
+    state.img = null; state.tpl = TEMPLATES[0];
+    try { localStorage.removeItem('statuspadi_draft'); } catch (e) {}
+    Array.prototype.forEach.call($('tplGrid').children, function (el, i) { el.classList.toggle('sel', i === 0); });
+    show('s1');
+  };
+  $('img').onchange = function (e) {
+    var f = e.target.files[0]; if (!f) return;
+    var url = URL.createObjectURL(f), im = new Image();
+    im.onload = function () { state.img = im; render(); };
+    im.src = url;
+  };
+  FIELDS.forEach(function (f) { $(f).addEventListener('input', saveDraft); });
+  function outFile(cb) {
+    $('preview').toBlob(function (blob) {
+      var file = new File([blob], 'statuspadi-promo.png', { type: 'image/png' });
+      cb(file);
+    }, 'image/png');
+  }
+  $('share').onclick = function () {
+    outFile(function (file) {
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: 'My promo' }).then(function () {}, function () { download(); });
+      } else { download(); }
+    });
+  };
+  function download() {
+    outFile(function (file) {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(file); a.download = 'statuspadi-promo.png'; a.click();
+    });
+  }
+  $('download').onclick = download;
+  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(function () {}); }
+  loadDraft(); buildGrid();
+})();
+</script>
+</body>
+</html>
